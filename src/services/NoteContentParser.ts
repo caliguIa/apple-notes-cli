@@ -1,7 +1,5 @@
-import { gunzip } from "@deno-library/compress";
 import { NoteItem, noteItemSchema } from "../schemas/noteSchemas.ts";
 import { ValidationError } from "../utils/error.ts";
-import { z } from "zod";
 
 interface ProtobufParsingResult {
   content: Uint8Array | null;
@@ -14,51 +12,25 @@ export class NoteContentParser {
 
   public parse(data: Uint8Array): NoteItem[] {
     try {
-      const decompressed = gunzip(data);
-      const items = this.parseProtobuf(decompressed);
-      const validatedItems: NoteItem[] = [];
-
-      for (const item of items) {
-        try {
-          const validatedItem = noteItemSchema.parse(item);
-          validatedItems.push(validatedItem);
-        } catch (error) {
-          if (error instanceof z.ZodError) {
-            throw new ValidationError("Invalid note item format", error);
-          }
-          console.error("Unexpected error validating note item:", error);
-        }
-      }
-
-      return validatedItems;
-    } catch (error) {
-      if (error instanceof ValidationError) {
-        throw error;
-      }
-      console.error("Error parsing note content:", error);
-      return [];
-    }
-  }
-
-  private parseProtobuf(data: Uint8Array): NoteItem[] {
-    try {
-      const items: NoteItem[] = [];
       const result = this.extractContentAndStates(data);
-      if (!result.content) return [];
+      if (!result.content) {
+        return [];
+      }
 
       const text = this.textDecoder.decode(result.content).replace(
-        // deno-lint-ignore no-control-regex
+        // Remove control character often used in Notes formatting
         /\u0001/g,
         "",
       );
+
       const lines = text.split("\n");
+      const items: NoteItem[] = [];
       let checklistIndex = 0;
 
       for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const trimmed = line.trim();
+        const line = lines[i].trim();
 
-        if (!trimmed) {
+        if (!line) {
           // Add empty line if there's content before it
           if (items.length > 0 && items[items.length - 1].text) {
             items.push(this.createNoteItem("", false, 0, false));
@@ -71,19 +43,20 @@ export class NoteContentParser {
 
         if (isChecklistItem) {
           const isChecked = result.checklistStates[checklistIndex];
-          items.push(this.createNoteItem(trimmed, isChecked, level, true));
+          items.push(this.createNoteItem(line, isChecked, level, true));
           checklistIndex++;
         } else {
-          items.push(this.createNoteItem(trimmed, false, level, false));
+          items.push(this.createNoteItem(line, false, level, false));
         }
       }
 
       return items;
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        throw new ValidationError("Failed to parse protobuf content", error);
+      if (error instanceof ValidationError) {
+        throw error;
       }
-      throw error;
+      console.error("Error parsing note content:", error);
+      return [];
     }
   }
 
@@ -171,12 +144,12 @@ export class NoteContentParser {
     level: number,
     isChecklistItem: boolean,
   ): NoteItem {
-    return {
+    return noteItemSchema.parse({
       text,
       isChecked,
       level,
       isChecklistItem,
-    };
+    });
   }
 
   private readVarint(data: Uint8Array, pos: number): number {

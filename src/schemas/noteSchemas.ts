@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+// Database note schema (internal representation)
 export const databaseNoteSchema = z.object({
   id: z.number().int().positive(),
   title: z.string().min(1),

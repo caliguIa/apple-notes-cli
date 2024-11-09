@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { serializableNoteSchema } from "./noteSchemas.ts";
+import { databaseNoteSchema, serializableNoteSchema } from "./noteSchemas.ts";
 
 export const noteViewDataSchema = z.object({
-  notes: z.array(serializableNoteSchema),
+  notes: z.array(z.union([serializableNoteSchema, databaseNoteSchema])),
   searchTerm: z.string().optional(),
   totalCount: z.number().int().positive().optional(),
 });

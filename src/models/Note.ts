@@ -49,6 +49,12 @@ export class Note {
     return Note.parser.parse(this.content);
   }
 
+  public toView(): DatabaseNote {
+    return {
+      ...this.data,
+    };
+  }
+
   public toJSON(): SerializableNote {
     return {
       ...this.data,
