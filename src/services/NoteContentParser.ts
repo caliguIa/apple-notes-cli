@@ -55,7 +55,7 @@ export class NoteContentParser {
         this.extractContent(data),
       );
 
-      Analyze and validate metadata
+      // Analyze and validate metadata
       const metadata = noteMetadataSchema.parse(
         this.analyzeMetadata(parsedContent.metadataBlocks),
       );
