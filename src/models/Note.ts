@@ -1,18 +1,12 @@
-import { encodeBase64 } from "@std/encoding";
-import {
-  DatabaseNote,
-  databaseNoteSchema,
-  NoteItem,
-  SerializableNote,
-} from "../schemas/noteSchemas.ts";
+import { NoteItem, noteSchema, NoteType } from "../schemas/noteSchemas.ts";
 import { NoteContentParser } from "../services/NoteContentParser.ts";
 
 export class Note {
   private static parser = new NoteContentParser();
-  private constructor(private data: DatabaseNote) {}
+  private constructor(private data: NoteType) {}
 
   public static create(data: unknown): Note {
-    const validated = databaseNoteSchema.parse(data);
+    const validated = noteSchema.parse(data);
     return new Note(validated);
   }
 
@@ -45,20 +39,15 @@ export class Note {
   }
 
   public parseContent(): NoteItem[] {
-    if (!this.content) return [];
+    if (!this.content) {
+      console.error("No content to parse");
+      return [];
+    }
+    // console.error("Content buffer length:", this.content.length);
     return Note.parser.parse(this.content);
   }
 
-  public toView(): DatabaseNote {
-    return {
-      ...this.data,
-    };
-  }
-
-  public toJSON(): SerializableNote {
-    return {
-      ...this.data,
-      content: this.data.content ? encodeBase64(this.data.content) : null,
-    };
+  public getData(): NoteType {
+    return { ...this.data };
   }
 }
