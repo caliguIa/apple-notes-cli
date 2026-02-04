@@ -1,0 +1,45 @@
+classDiagram
+    class CompressedNote {
+        gzip header
+        content block
+        metadata blocks
+    }
+
+    class ContentBlock {
+        field2: MainContent
+        field3[]: ContentMessage
+    }
+
+    class ContentMessage {
+        field2: TextContent
+        field4[]: ChecklistState
+        field5[]: NestingLevel
+        FormatMetadata: bytes
+    }
+
+    class FormatMetadata {
+        header: bytes
+        formatBlocks[]: FormatBlock
+        markers: number[]
+    }
+
+    class FormatBlock {
+        type: "header"|"format"|"marker"
+        value: number
+        position: number
+        raw: bytes
+    }
+
+    class FormatPatterns {
+        Bold: "2e 41 40"
+        Italic: "0f 3c 4f"
+        Underline: "3f 73 4b"
+        Mixed: "59 34 5e 45"
+    }
+
+    CompressedNote --> ContentBlock : contains
+    ContentBlock --> ContentMessage : contains[]
+    ContentMessage --> FormatMetadata : contains
+    FormatMetadata --> FormatBlock : contains[]
+    FormatMetadata .. FormatPatterns : uses
+

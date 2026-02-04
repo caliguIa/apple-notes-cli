@@ -2,6 +2,10 @@ import { NoteItem, noteItemSchema } from "../schemas/noteSchemas.ts";
 import { ValidationError } from "../utils/error.ts";
 import { gunzip } from "@deno-library/compress";
 import { z } from "zod";
+import { encodeBase64 } from "@std/encoding";
+import { MetadataMessageParser } from "./MetaDataMessageParser.ts";
+import { TextFormatParser } from "./TextFormatParser.ts";
+import { encodeHex } from "jsr:@std/encoding@0.221/hex";
 
 // Validation schemas
 const metadataBlockSchema = z.object({
@@ -49,19 +53,55 @@ export class NoteContentParser {
       if (data[0] === 0x1f && data[1] === 0x8b) {
         data = gunzip(data);
       }
+      // console.log("base64data", encodeHex(data));
+      Deno.writeFile("c4a.bin", data);
+      // const fullArray = Array.from(data).join(" ");
+      // console.log(`raw content - [${fullArray}]`);
+      throw new Error("Invalid note content structure");
 
       // Extract and validate content
       const parsedContent = parsedContentSchema.parse(
         this.extractContent(data),
       );
-
-      // Analyze and validate metadata
-      const metadata = noteMetadataSchema.parse(
-        this.analyzeMetadata(parsedContent.metadataBlocks),
+      console.log(
+        "Full content array:",
+        JSON.stringify(parsedContent.textContent.split("\n"), null, 2),
       );
+      // Analyze and validate metadata
+      // const metadata = noteMetadataSchema.parse(
+      //   this.analyzeMetadata(parsedContent.metadataBlocks),
+      // );
+      //
+      // this.logMetadata(metadata);
+      // const messages = MetadataMessageParser.parseHexString(mysteryString);
+      // console.log("parsingmyseterystring", JSON.stringify(messages, null, 2));
+      // const mysteryString = "\u0018\u0001J\u0010�|\b\u0012:�Ov���@y�I\u0018";
+      // const formatInfo = TextFormatParser.parseHexString(mysteryString);
+      // console.log("parsingformat", TextFormatParser.formatToString(formatInfo));
 
-      this.logMetadata(metadata);
-
+      const formatMetadata = this.extractFormatMetadata(
+        parsedContent.textContent,
+      );
+      if (formatMetadata) {
+        console.log(
+          "Format metadata found:",
+          JSON.stringify(
+            {
+              raw: formatMetadata,
+              hex: Array.from(formatMetadata).map((c) =>
+                c.charCodeAt(0).toString(16).padStart(2, "0")
+              ).join(" "),
+            },
+            null,
+            2,
+          ),
+        );
+        const formatInfo = TextFormatParser.parseHexString(formatMetadata);
+        console.log(
+          "parsingformat",
+          TextFormatParser.formatToString(formatInfo),
+        );
+      }
       // Process and validate note items
       return this.processNoteItems(
         parsedContent.textContent,
@@ -439,5 +479,15 @@ export class NoteContentParser {
       size++;
     } while (n !== 0);
     return size;
+  }
+  private extractFormatMetadata(content: string): string | null {
+    // Look for strings that start with common format markers
+    const lines = content.split("\n");
+    for (const line of lines) {
+      if (line.startsWith("\u0018\u0001") || line.startsWith("\u0014\u0018")) {
+        return line;
+      }
+    }
+    return null;
   }
 }

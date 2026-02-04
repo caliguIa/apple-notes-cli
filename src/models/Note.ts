@@ -6,6 +6,7 @@ export class Note {
   private constructor(private data: NoteType) {}
 
   public static create(data: unknown): Note {
+    console.log("data", data);
     const validated = noteSchema.parse(data);
     return new Note(validated);
   }

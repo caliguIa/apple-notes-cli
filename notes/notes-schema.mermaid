@@ -1,0 +1,37 @@
+classDiagram
+    class CompressedNote {
+        gzip header
+        compressed data
+    }
+
+    class NoteProtobuf {
+        field1: varint (header)
+        field2: ContentBlock
+    }
+
+    class ContentBlock {
+        field1: varint
+        field2: varint
+        field3[]: ContentMessage
+    }
+
+    class ContentMessage {
+        field2: TextContent
+        field4: ChecklistState[]
+        field5: NestingLevel[]
+        metadata: MetadataFields
+    }
+
+    class MetadataFields {
+        formatVersion: varint (835054)
+        typeFlags: varint[] (67)
+        stateFlags: varint[] (1)
+        timestamps: varint[]
+        reference: fixed64
+        formatData: bytes
+    }
+
+    CompressedNote --> NoteProtobuf : decompress
+    NoteProtobuf --> ContentBlock : contains
+    ContentBlock --> ContentMessage : contains[]
+    ContentMessage --> MetadataFields : contains
